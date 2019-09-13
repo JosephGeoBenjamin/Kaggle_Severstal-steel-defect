@@ -10,7 +10,7 @@ import lossMetric_utils as LossMet
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #----
 
-DATASET_PATH='datasets/severstal-steel'
+DATASET_PATH='datasets/severstal/'
 
 train_dataset = SeverstalSteelData(csv_file='train.csv',
                                     root_dir= DATASET_PATH,

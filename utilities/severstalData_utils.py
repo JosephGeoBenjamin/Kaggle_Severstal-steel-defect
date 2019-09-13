@@ -21,11 +21,11 @@ class SeverstalSteelData(Dataset):
         self.device = device
         join = os.path.join
         self.imgList = data_path_fromCSV(join(root_dir,csv_file),
-                                        join(root_dir,"groundtruth") ,
+                                        join(root_dir,"images") ,
                                         dataExt = ".jpg")
         self.gtList = data_path_fromCSV(join(root_dir,csv_file),
-                                        join(root_dir,"groundtruth") ,
-                                        dataExt = ".jpg")
+                                        join(root_dir,"groundtruths") ,
+                                        dataExt = ".npy")
 
         if (not self.imgList) or (not self.gtList):
             print("Empty data. Corruption on CSV read", file=sys.stderr)
