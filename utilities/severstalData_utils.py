@@ -7,7 +7,9 @@ Dataset: https://www.kaggle.com/c/severstal-steel-defect-detection/
 import glob
 import sys
 import os
+import torch
 from torch.utils.data import Dataset
+from torch.autograd import Variable
 import numpy as np
 import imageio as imio
 import csv
@@ -20,10 +22,10 @@ class SeverstalSteelData(Dataset):
         imgExt=".jpg", gtExt=".npy", device='cpu'):
         self.device = device
         join = os.path.join
-        self.imgList = data_path_fromCSV(join(root_dir,csv_file),
+        self.imgList = self.data_path_fromCSV(join(root_dir,csv_file),
                                         join(root_dir,"images") ,
                                         dataExt = ".jpg")
-        self.gtList = data_path_fromCSV(join(root_dir,csv_file),
+        self.gtList = self.data_path_fromCSV(join(root_dir,csv_file),
                                         join(root_dir,"groundtruths") ,
                                         dataExt = ".npy")
 
@@ -31,8 +33,8 @@ class SeverstalSteelData(Dataset):
             print("Empty data. Corruption on CSV read", file=sys.stderr)
         if (len(self.imgList) == len(self.gtList)):
             for i in range(len(self.imgList)):
-                imgBase = os.path.basename(self.imgList[i]).replace(imgExt)
-                gtBase = os.path.basename(self.gtList[i]).replace(gtExt)
+                imgBase = os.path.basename(self.imgList[i]).replace(imgExt, "")
+                gtBase = os.path.basename(self.gtList[i]).replace(gtExt, "")
                 if ( imgBase != gtBase):
                     print("Corrupted: MisMatch in file names",imgList[i], gtList[i] ,file=sys.stderr)
         else:
@@ -42,12 +44,18 @@ class SeverstalSteelData(Dataset):
     def __getitem__(self, idx):
         """ Returns torch format CHW
         """
-        img = imio.read(imgList[idx])
+        img = imio.imread(self.imgList[idx])
         img = img.transpose(2,0,1)
-        gt = np.load(gtList[idx])
+        img = Variable(torch.from_numpy(img))
+        gt = np.load(self.gtList[idx])
+        gt = Variable(torch.from_numpy(gt))
         return img.to(self.device), gt.to(self.device)
 
-    def data_path_fromCSV(csvFilePath, rootPath, dataExt = ".jpg"):
+    def __len__(self):
+        return len(self.imgList)
+
+
+    def data_path_fromCSV(self, csvFilePath, rootPath, dataExt = ".jpg"):
         imgNames = []
         with open(csvFilePath, "r") as csvFile:
             csv_reader = csv.DictReader(csvFile, delimiter=',')
@@ -60,6 +68,6 @@ class SeverstalSteelData(Dataset):
             if os.path.isfile(path):
                 dataPaths.append(path)
             else:
-                print ("File Doesn't exist:" path)
+                print ("File Doesn't exist:", path)
 
         return dataPaths

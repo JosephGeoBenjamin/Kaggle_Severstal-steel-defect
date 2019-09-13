@@ -3,9 +3,12 @@
 Output: 4 binary mask layers each corresponding to a class
 
 '''
+
+import torch
+from torch.utils.data import DataLoader
 from utilities.severstalData_utils import SeverstalSteelData
-from networks.resnet_unet import ResNetUNet
-import lossMetric_utils as LossMet
+from networks.resnet_unet import ResNet18UNet
+import utilities.lossMetrics_utils as LossMet
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #----
@@ -39,7 +42,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
 #----
 
 if __name__ =="__main__":
-
+    best_loss = 0
     for epoch in range(num_epochs):
         acc_loss = 0
         for ith, img, gt in enumerate(train_dataloader):
@@ -49,7 +52,7 @@ if __name__ =="__main__":
             acc_loss += loss
             #--- backward
             loss.backward()
-            if ( (ith+1) % acc_batch == 0)
+            if ( (ith+1) % acc_batch == 0):
                 optimizer.step()
                 optimizer.zero_grad()
                 print('epoch[{}/{}], Mini Batch-{} loss:{:.4f}'
@@ -69,4 +72,4 @@ if __name__ =="__main__":
                 print("***saving best optimal state [Loss:{}] ***").format(val_loss.data)
                 best_loss = val_loss
                 torch.save(model.state_dict(), "weights/model.pth")
-u
+
