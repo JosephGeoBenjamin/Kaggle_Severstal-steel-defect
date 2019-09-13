@@ -21,7 +21,7 @@ def convrelu(in_channels, out_channels, kernel, padding):
         nn.ReLU(inplace=True),
     )
 
-class ResNetUNet(nn.Module):
+class ResNet18UNet(nn.Module):
 
     def __init__(self, n_class):
         super().__init__()

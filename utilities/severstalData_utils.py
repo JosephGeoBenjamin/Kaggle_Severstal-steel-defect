@@ -16,7 +16,9 @@ import csv
 class SeverstalSteelData(Dataset):
     ''' Used to load images and numpy GroundTruth
     '''
-    def __init__(self, csv_file, root_dir = "../datasets/" ,imgExt=".jpg", gtExt=".npy"):
+    def __init__(self, csv_file, root_dir = "../datasets/",
+        imgExt=".jpg", gtExt=".npy", device='cpu'):
+        self.device = device
         join = os.path.join
         self.imgList = data_path_fromCSV(join(root_dir,csv_file),
                                         join(root_dir,"groundtruth") ,
@@ -43,7 +45,7 @@ class SeverstalSteelData(Dataset):
         img = imio.read(imgList[idx])
         img = img.transpose(2,0,1)
         gt = np.load(gtList[idx])
-        return img, gt
+        return img.to(self.device), gt.to(self.device)
 
     def data_path_fromCSV(csvFilePath, rootPath, dataExt = ".jpg"):
         imgNames = []
