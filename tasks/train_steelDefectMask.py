@@ -40,7 +40,7 @@ test_dataloader = DataLoader(test_dataset, batch_size=4,
 #----
 
 num_epochs = 10000
-batch_size = 4
+batch_size = 16
 acc_batch = 16 / batch_size
 learning_rate = 1e-4
 
@@ -54,7 +54,8 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
 
 
 if __name__ =="__main__":
-    best_loss = 0
+
+    best_loss = float("inf") 
     for epoch in range(num_epochs):
         #--- Train
         acc_loss = 0
@@ -75,6 +76,7 @@ if __name__ =="__main__":
                     .format(epoch+1, num_epochs, (ith+1)//acc_batch, acc_loss.data))
                 running_loss.append(acc_loss)
                 acc_loss=0
+        
         log_to_csv(running_loss, "logs/train_batchloss.csv")
 
         #--- Validate
@@ -89,9 +91,9 @@ if __name__ =="__main__":
 
         print('epoch[{}/{}], [-----TEST------] loss:{:.4f}'
               .format(epoch+1, num_epochs, val_loss.data))
-        log_to_csv(val_loss, "logs/test_loss.csv")
+        log_to_csv([val_loss.item()], "logs/test_loss.csv")
 
         if val_loss < best_loss:
-            print("***saving best optimal state [Loss:{}] ***").format(val_loss.data)
+            print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
             torch.save(model.state_dict(), "weights/model.pth")
