@@ -14,6 +14,13 @@ import utilities.lossMetrics_utils as LossMet
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #----
 
+def log_to_csv(data, csv_file):
+    with open(csv_file, "a") as csvFile:
+        writer = csv.writer(csvFile)
+        writer.writerow(data)
+    csvFile.close()
+
+#----
 DATASET_PATH='datasets/severstal/'
 
 train_dataset = SeverstalSteelData(csv_file='train.csv',
@@ -42,10 +49,13 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
 
 #----
 
+
 if __name__ =="__main__":
     best_loss = 0
     for epoch in range(num_epochs):
+        #--- Train
         acc_loss = 0
+        running_loss = []
         for ith, (img, gt) in enumerate(train_dataloader):
             img = img.to(device)
             gt = gt.to(device)
@@ -60,18 +70,25 @@ if __name__ =="__main__":
                 optimizer.zero_grad()
                 print('epoch[{}/{}], Mini Batch-{} loss:{:.4f}'
                     .format(epoch+1, num_epochs, (ith+1)/acc_batch, acc_loss.data))
+                running_loss.append(acc_loss)
                 acc_loss=0
+        log_to_csv(running_loss, "logs/train_batchloss.csv")
 
-        for jth, val_img, val_gt in enumerate(test_dataloader):
-            val_loss = 0
+        #--- Validate
+        val_loss = 0
+        for jth, (val_img, val_gt) in enumerate(test_dataloader):
+            val_img = val_img.to(device)
+            val_gt = val_gt.to(device)
             with torch.no_grad():
                 val_output = model(val_img)
                 val_loss += criterion(val_output, val_gt)
-            val_loss = val_loss / len(test_dataloader)
-            print('epoch [{}/{}], [-----TEST------] loss:{:.4f}'
-              .format(epoch+1, num_epochs, val_loss.data))
+        val_loss = val_loss / len(test_dataloader)
 
-            if val_loss < best_loss:
-                print("***saving best optimal state [Loss:{}] ***").format(val_loss.data)
-                best_loss = val_loss
-                torch.save(model.state_dict(), "weights/model.pth")
+        print('epoch[{}/{}], [-----TEST------] loss:{:.4f}'
+              .format(epoch+1, num_epochs, val_loss.data))
+        log_to_csv(val_loss, "logs/test_loss.csv")
+
+        if val_loss < best_loss:
+            print("***saving best optimal state [Loss:{}] ***").format(val_loss.data)
+            best_loss = val_loss
+            torch.save(model.state_dict(), "weights/model.pth")
