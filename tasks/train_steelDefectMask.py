@@ -14,12 +14,15 @@ import utilities.lossMetrics_utils as LossMet
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #----
 
+import csv
 def log_to_csv(data, csv_file):
     with open(csv_file, "a") as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(data)
     csvFile.close()
 
+
+log_to_csv([0,0,0], "logs/dummy.csv")
 #----
 DATASET_PATH='datasets/severstal/'
 
@@ -37,7 +40,7 @@ test_dataloader = DataLoader(test_dataset, batch_size=4,
 #----
 
 num_epochs = 10000
-batch_size = 2
+batch_size = 4
 acc_batch = 16 / batch_size
 learning_rate = 1e-4
 
@@ -69,7 +72,7 @@ if __name__ =="__main__":
                 optimizer.step()
                 optimizer.zero_grad()
                 print('epoch[{}/{}], Mini Batch-{} loss:{:.4f}'
-                    .format(epoch+1, num_epochs, (ith+1)/acc_batch, acc_loss.data))
+                    .format(epoch+1, num_epochs, (ith+1)//acc_batch, acc_loss.data))
                 running_loss.append(acc_loss)
                 acc_loss=0
         log_to_csv(running_loss, "logs/train_batchloss.csv")
