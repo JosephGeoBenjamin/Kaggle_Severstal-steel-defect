@@ -49,7 +49,7 @@ class SeverstalSteelData(Dataset):
         img = Variable(torch.from_numpy(img))
         gt = np.load(self.gtList[idx])
         gt = Variable(torch.from_numpy(gt))
-        return img.to(self.device), gt.to(self.device)
+        return img, gt
 
     def __len__(self):
         return len(self.imgList)

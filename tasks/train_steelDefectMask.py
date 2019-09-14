@@ -46,6 +46,8 @@ if __name__ =="__main__":
     for epoch in range(num_epochs):
         acc_loss = 0
         for ith, img, gt in enumerate(train_dataloader):
+            img = img.to(device)
+            gt = gt.to(device)
             #--- forward
             output = model(img)
             loss = criterion(output, gt) / acc_batch
@@ -72,4 +74,3 @@ if __name__ =="__main__":
                 print("***saving best optimal state [Loss:{}] ***").format(val_loss.data)
                 best_loss = val_loss
                 torch.save(model.state_dict(), "weights/model.pth")
-
