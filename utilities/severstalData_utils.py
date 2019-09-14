@@ -46,10 +46,12 @@ class SeverstalSteelData(Dataset):
         """
         img = imio.imread(self.imgList[idx])
         img = img.transpose(2,0,1)
-        img = Variable(torch.from_numpy(img))
+        img = torch.from_numpy(img).type(torch.FloatTensor)
+        img = Variable(img)
         gt = np.load(self.gtList[idx])
-        gt = Variable(torch.from_numpy(gt))
-        return img, gt
+        gt = torch.from_numpy(gt).type(torch.FloatTensor)
+        gt = Variable(gt)
+        return (img, gt)
 
     def __len__(self):
         return len(self.imgList)

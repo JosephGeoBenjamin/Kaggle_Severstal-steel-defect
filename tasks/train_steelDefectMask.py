@@ -6,6 +6,7 @@ Output: 4 binary mask layers each corresponding to a class
 
 import torch
 from torch.utils.data import DataLoader
+
 from utilities.severstalData_utils import SeverstalSteelData
 from networks.resnet_unet import ResNet18UNet
 import utilities.lossMetrics_utils as LossMet
@@ -45,7 +46,7 @@ if __name__ =="__main__":
     best_loss = 0
     for epoch in range(num_epochs):
         acc_loss = 0
-        for ith, img, gt in enumerate(train_dataloader):
+        for ith, (img, gt) in enumerate(train_dataloader):
             img = img.to(device)
             gt = gt.to(device)
             #--- forward
@@ -58,7 +59,7 @@ if __name__ =="__main__":
                 optimizer.step()
                 optimizer.zero_grad()
                 print('epoch[{}/{}], Mini Batch-{} loss:{:.4f}'
-                    .format(epoch+1, ith+1/acc_batch, num_epochs, acc_loss.data))
+                    .format(epoch+1, num_epochs, (ith+1)/acc_batch, acc_loss.data))
                 acc_loss=0
 
         for jth, val_img, val_gt in enumerate(test_dataloader):
