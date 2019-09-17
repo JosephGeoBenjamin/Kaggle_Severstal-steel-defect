@@ -11,7 +11,7 @@ from utilities.severstalData_utils import SeverstalSteelData
 from networks.resnet_unet import ResNet18UNet
 import utilities.lossMetrics_utils as LossMet
 
-TRAIN_NAME = "fTversky_DiceBce"
+TRAIN_NAME = "fTDB_balanced"
 if not os.path.exists("logs/"+TRAIN_NAME):
     os.makedirs("logs/"+TRAIN_NAME)
 
@@ -43,12 +43,12 @@ test_dataloader = DataLoader(test_dataset, batch_size=4,
 #----
 
 num_epochs = 10000
-batch_size = 16
-acc_batch = 16 / batch_size
+batch_size = 8
+acc_batch = 8 / batch_size
 learning_rate = 1e-4
 
 model = ResNet18UNet(4).to(device)
-# model.load_state_dict(torch.load("/content/conv_autoencoder.pth"))
+model.load_state_dict(torch.load("weights/model.pth"))
 
 diceCrit = LossMet.DiceLoss()
 
@@ -92,11 +92,12 @@ if __name__ =="__main__":
                     .format(epoch+1, num_epochs, (ith+1)//acc_batch, acc_loss.data))
                 running_loss.append(acc_loss)
                 acc_loss=0
-
+            #break
         log_to_csv(running_loss, "logs/"+TRAIN_NAME+"/trainLoss.csv")
 
         #--- Validate
         val_loss = 0
+        val_accuracy = 0
         for jth, (val_img, val_gt) in enumerate(test_dataloader):
             val_img = val_img.to(device)
             val_gt = val_gt.to(device)
@@ -105,7 +106,7 @@ if __name__ =="__main__":
                 val_loss += loss_estimator(val_output, val_gt)
 
                 val_accuracy += (1 - diceCrit(val_output, val_gt))
-
+            #break
         val_loss = val_loss / len(test_dataloader)
         val_accuracy = val_accuracy / len(test_dataloader)
 
