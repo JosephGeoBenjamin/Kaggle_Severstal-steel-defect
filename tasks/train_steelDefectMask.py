@@ -6,12 +6,17 @@ Output: 4 binary mask layers each corresponding to a class
 
 import torch
 from torch.utils.data import DataLoader
-
+import os
 from utilities.severstalData_utils import SeverstalSteelData
 from networks.resnet_unet import ResNet18UNet
 import utilities.lossMetrics_utils as LossMet
 
+TRAIN_NAME = "fTversky_DiceBce"
+if not os.path.exists("logs/"+TRAIN_NAME):
+    os.makedirs("logs/"+TRAIN_NAME)
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 #----
 
 import csv
@@ -21,8 +26,6 @@ def log_to_csv(data, csv_file):
         writer.writerow(data)
     csvFile.close()
 
-
-log_to_csv([0,0,0], "logs/dummy.csv")
 #----
 DATASET_PATH='datasets/severstal/'
 
@@ -46,16 +49,26 @@ learning_rate = 1e-4
 
 model = ResNet18UNet(4).to(device)
 # model.load_state_dict(torch.load("/content/conv_autoencoder.pth"))
-criterion = LossMet.DiceBCELoss()
+
+diceCrit = LossMet.DiceLoss()
+
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                              weight_decay=1e-5)
 
 #----
 
+def loss_estimator(output, target):
+    criterionDBCE = LossMet.DiceBCELoss()
+    criterionFTversky = LossMet.FocalTverskyLoss()
 
+    lossDBCE = criterionDBCE(output, target)
+    lossFTversky = criterionFTversky(output, target)
+
+    return lossDBCE+lossFTversky
+#----
 if __name__ =="__main__":
 
-    best_loss = float("inf") 
+    best_loss = float("inf")
     for epoch in range(num_epochs):
         #--- Train
         acc_loss = 0
@@ -63,10 +76,13 @@ if __name__ =="__main__":
         for ith, (img, gt) in enumerate(train_dataloader):
             img = img.to(device)
             gt = gt.to(device)
+
             #--- forward
             output = model(img)
-            loss = criterion(output, gt) / acc_batch
+
+            loss = loss_estimator(output, gt) / acc_batch
             acc_loss += loss
+
             #--- backward
             loss.backward()
             if ( (ith+1) % acc_batch == 0):
@@ -76,8 +92,8 @@ if __name__ =="__main__":
                     .format(epoch+1, num_epochs, (ith+1)//acc_batch, acc_loss.data))
                 running_loss.append(acc_loss)
                 acc_loss=0
-        
-        log_to_csv(running_loss, "logs/train_batchloss.csv")
+
+        log_to_csv(running_loss, "logs/"+TRAIN_NAME+"/trainLoss.csv")
 
         #--- Validate
         val_loss = 0
@@ -86,14 +102,21 @@ if __name__ =="__main__":
             val_gt = val_gt.to(device)
             with torch.no_grad():
                 val_output = model(val_img)
-                val_loss += criterion(val_output, val_gt)
-        val_loss = val_loss / len(test_dataloader)
+                val_loss += loss_estimator(val_output, val_gt)
 
-        print('epoch[{}/{}], [-----TEST------] loss:{:.4f}'
-              .format(epoch+1, num_epochs, val_loss.data))
-        log_to_csv([val_loss.item()], "logs/test_loss.csv")
+                val_accuracy += (1 - diceCrit(val_output, val_gt))
+
+        val_loss = val_loss / len(test_dataloader)
+        val_accuracy = val_accuracy / len(test_dataloader)
+
+        print('epoch[{}/{}], [-----TEST------] loss:{:.4f}  Accur:{:.4f}'
+              .format(epoch+1, num_epochs, val_loss.data, val_accuracy.data))
+        log_to_csv([val_loss.item(), val_accuracy.item()],
+                    "logs/"+TRAIN_NAME+"/testLoss.csv")
 
         if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
-            torch.save(model.state_dict(), "weights/model.pth")
+            torch.save(model.state_dict(), "weights/"+TRAIN_NAME+"_model.pth")
+            log_to_csv([epoch+1, val_loss.item(), val_accuracy.item()],
+                    "logs/"+TRAIN_NAME+"/bestCheckpoint.csv")
