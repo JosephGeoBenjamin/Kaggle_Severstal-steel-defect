@@ -6,14 +6,11 @@ Output: 4 binary mask layers each corresponding to a class
 
 import torch
 from torch.utils.data import DataLoader
+from torchvision import transforms
 import os
 from utilities.severstalData_utils import SeverstalSteelData
 from networks.resnet_unet import ResNet18UNet
 import utilities.lossMetrics_utils as LossMet
-
-TRAIN_NAME = "fTDB_balanced"
-if not os.path.exists("logs/"+TRAIN_NAME):
-    os.makedirs("logs/"+TRAIN_NAME)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -26,29 +23,19 @@ def log_to_csv(data, csv_file):
         writer.writerow(data)
     csvFile.close()
 
-#----
-DATASET_PATH='datasets/severstal/'
+#----------------------------------------------------
 
-train_dataset = SeverstalSteelData(csv_file='train.csv',
-                                    root_dir= DATASET_PATH,
-                                    device = device)
-train_dataloader = DataLoader(train_dataset, batch_size=4,
-                        shuffle=True, num_workers=4)
-
-test_dataset = SeverstalSteelData(csv_file='validate.csv',
-                                   root_dir=DATASET_PATH,
-                                   device = device)
-test_dataloader = DataLoader(test_dataset, batch_size=4,
-                        shuffle=False, num_workers=4)
+TRAIN_NAME = "fTDB_BalAug"
+if not os.path.exists("logs/"+TRAIN_NAME): os.makedirs("logs/"+TRAIN_NAME)
 #----
 
 num_epochs = 10000
 batch_size = 8
 acc_batch = 8 / batch_size
-learning_rate = 1e-4
+learning_rate = 1e-6
 
 model = ResNet18UNet(4).to(device)
-model.load_state_dict(torch.load("weights/model.pth"))
+model.load_state_dict(torch.load("weights/fTDB_balanced_model.pth"))
 
 diceCrit = LossMet.DiceLoss()
 
@@ -66,6 +53,29 @@ def loss_estimator(output, target):
 
     return lossDBCE+lossFTversky
 #----
+
+
+DATASET_PATH='datasets/severstal/'
+
+train_dataset = SeverstalSteelData(csv_file='train.csv',
+                                    root_dir= DATASET_PATH,
+                                    device = device)
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
+                        shuffle=True, num_workers=4,
+                        transform=transform.Compose([
+                            transform.RandomHorizontalFlip(),
+                            transform.RandomVerticalFlip(),
+                            ])
+                        )
+
+test_dataset = SeverstalSteelData(csv_file='validate.csv',
+                                   root_dir=DATASET_PATH,
+                                   device = device)
+test_dataloader = DataLoader(test_dataset, batch_size=batch_size,
+                        shuffle=False, num_workers=4)
+
+#-----
+
 if __name__ =="__main__":
 
     best_loss = float("inf")
@@ -115,6 +125,7 @@ if __name__ =="__main__":
         log_to_csv([val_loss.item(), val_accuracy.item()],
                     "logs/"+TRAIN_NAME+"/testLoss.csv")
 
+        #--- save Checkpoint
         if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
