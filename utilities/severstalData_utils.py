@@ -9,6 +9,7 @@ import sys
 import os
 import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
 from torch.autograd import Variable
 import numpy as np
 import imageio as imio
@@ -28,7 +29,6 @@ class SeverstalSteelData(Dataset):
         self.gtList = self.data_path_fromCSV(join(root_dir,csv_file),
                                         join(root_dir,"groundtruths") ,
                                         dataExt = ".npy")
-
         if (not self.imgList) or (not self.gtList):
             print("Empty data. Corruption on CSV read", file=sys.stderr)
         if (len(self.imgList) == len(self.gtList)):
@@ -41,6 +41,7 @@ class SeverstalSteelData(Dataset):
             print("Corrupted: MisMatch in Image and GroundTruth count", file=sys.stderr)
 
 
+
     def __getitem__(self, idx):
         """ Returns torch format CHW
         """
@@ -51,10 +52,23 @@ class SeverstalSteelData(Dataset):
         gt = np.load(self.gtList[idx])
         gt = torch.from_numpy(gt).type(torch.FloatTensor)
         gt = Variable(gt)
-        return (img, gt)
+        return self.manual_transforms(img, gt)
 
     def __len__(self):
         return len(self.imgList)
+
+
+    def manual_transforms(self, img, target):
+
+        hFlip = transforms.RandomHorizontalFlip(p=1)
+        vFlip = transforms.RandomVerticalFlip(p=1)
+
+        control = np.random.randint(3)
+        if control == 0: trans=transforms.Compose([hFlip])
+        elif control == 1: trans=transforms.Compose([vFlip])
+        elif control == 2: trans=transforms.Compose([vFlip,hFlip])
+
+        return trans(img), trans(target)
 
 
     def data_path_fromCSV(self, csvFilePath, rootPath, dataExt = ".jpg"):

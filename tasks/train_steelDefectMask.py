@@ -6,7 +6,6 @@ Output: 4 binary mask layers each corresponding to a class
 
 import torch
 from torch.utils.data import DataLoader
-from torchvision import transforms
 import os
 from utilities.severstalData_utils import SeverstalSteelData
 from networks.resnet_unet import ResNet18UNet
@@ -43,10 +42,10 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                              weight_decay=1e-5)
 
 #----
-
+# Loss
+criterionDBCE = LossMet.DiceBCELoss()
+criterionFTversky = LossMet.FocalTverskyLoss()
 def loss_estimator(output, target):
-    criterionDBCE = LossMet.DiceBCELoss()
-    criterionFTversky = LossMet.FocalTverskyLoss()
 
     lossDBCE = criterionDBCE(output, target)
     lossFTversky = criterionFTversky(output, target)
@@ -61,12 +60,7 @@ train_dataset = SeverstalSteelData(csv_file='train.csv',
                                     root_dir= DATASET_PATH,
                                     device = device)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
-                        shuffle=True, num_workers=4,
-                        transform=transform.Compose([
-                            transform.RandomHorizontalFlip(),
-                            transform.RandomVerticalFlip(),
-                            ])
-                        )
+                        shuffle=True, num_workers=4)
 
 test_dataset = SeverstalSteelData(csv_file='validate.csv',
                                    root_dir=DATASET_PATH,
