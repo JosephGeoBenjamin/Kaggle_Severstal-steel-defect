@@ -9,7 +9,6 @@ import sys
 import os
 import torch
 from torch.utils.data import Dataset
-from torchvision import transforms
 from torch.autograd import Variable
 import numpy as np
 import imageio as imio
@@ -47,28 +46,27 @@ class SeverstalSteelData(Dataset):
         """
         img = imio.imread(self.imgList[idx])
         img = img.transpose(2,0,1)
-        img = torch.from_numpy(img).type(torch.FloatTensor)
-        img = Variable(img)
         gt = np.load(self.gtList[idx])
+        img, gt = self.manual_transforms(img, gt)
+        
+        img = torch.from_numpy(img).type(torch.FloatTensor)
         gt = torch.from_numpy(gt).type(torch.FloatTensor)
-        gt = Variable(gt)
-        return self.manual_transforms(img, gt)
+        return  Variable(img), Variable(gt)
 
     def __len__(self):
         return len(self.imgList)
 
 
     def manual_transforms(self, img, target):
-
-        hFlip = transforms.RandomHorizontalFlip(p=1)
-        vFlip = transforms.RandomVerticalFlip(p=1)
-
+        ''' Return CHW
+        imput CHW
+        '''
         control = np.random.randint(3)
-        if control == 0: trans=transforms.Compose([hFlip])
-        elif control == 1: trans=transforms.Compose([vFlip])
-        elif control == 2: trans=transforms.Compose([vFlip,hFlip])
+        if control == 0: img = img[:,::-1,:].copy(); target = target[:,::-1,:].copy(); #H-flip
+        elif control == 1: img = img[:,:,::-1].copy(); target = target[:,:,::-1].copy(); #V-flip
+        elif control == 2:  img = img[:,::-1,::-1].copy(); target = target[:,::-1,::-1].copy(); #HV-flip
 
-        return trans(img), trans(target)
+        return img, target
 
 
     def data_path_fromCSV(self, csvFilePath, rootPath, dataExt = ".jpg"):
