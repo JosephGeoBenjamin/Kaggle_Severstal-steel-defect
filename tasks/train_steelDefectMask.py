@@ -29,7 +29,7 @@ if not os.path.exists("logs/"+TRAIN_NAME): os.makedirs("logs/"+TRAIN_NAME)
 #----
 
 num_epochs = 10000
-batch_size = 4
+batch_size = 8
 acc_batch = 16 / batch_size
 learning_rate = 1e-6
 
@@ -60,13 +60,13 @@ train_dataset = SeverstalSteelData(csv_file='train.csv',
                                     root_dir= DATASET_PATH,
                                     device = device)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
-                        shuffle=True, num_workers=4)
+                        shuffle=True, num_workers=8)
 
 test_dataset = SeverstalSteelData(csv_file='validate.csv',
                                    root_dir=DATASET_PATH,
                                    device = device)
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size,
-                        shuffle=False, num_workers=4)
+                        shuffle=False, num_workers=8)
 
 #-----
 
