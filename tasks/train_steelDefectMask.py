@@ -24,17 +24,17 @@ def log_to_csv(data, csv_file):
 
 #----------------------------------------------------
 
-TRAIN_NAME = "fTDB_BalAug"
+TRAIN_NAME = "2fTDB_BalAug"
 if not os.path.exists("logs/"+TRAIN_NAME): os.makedirs("logs/"+TRAIN_NAME)
 #----
 
 num_epochs = 10000
-batch_size = 8
+batch_size = 4
 acc_batch = 16 / batch_size
-learning_rate = 1e-6
+learning_rate = 1e-4
 
 model = ResNet18UNet(4).to(device)
-model.load_state_dict(torch.load("weights/fTDB_balanced_model.pth"))
+model.load_state_dict(torch.load("weights/fTDB_BalAug_model.pth"))
 
 diceCrit = LossMet.DiceLoss()
 
