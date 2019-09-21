@@ -34,15 +34,21 @@ acc_batch = 16 / batch_size
 learning_rate = 1e-4
 
 model = ResNet18UNet(4).to(device)
-model.load_state_dict(torch.load("weights/fTDB_BalAug_model.pth"))
+
+## --- Pretrained Loader
+pretrained_dict = torch.load("weights/fTDB_balanced_model.pth")
+model_dict = model.state_dict()
+pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+model_dict.update(pretrained_dict)
+model.load_state_dict(model_dict)
+# ---
+
 
 diceCrit = LossMet.DiceLoss()
-
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                              weight_decay=1e-5)
 
-#----
-# Loss
+## --- Loss
 criterionDBCE = LossMet.DiceBCELoss()
 criterionFTversky = LossMet.FocalTverskyLoss()
 def loss_estimator(output, target):
