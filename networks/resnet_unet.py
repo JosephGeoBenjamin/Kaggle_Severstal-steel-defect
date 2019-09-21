@@ -102,7 +102,7 @@ if __name__ =="__main__":
     from torchsummary import summary
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = ResNetUNet(4)
+    model = ResNet18UNet(4)
     model = model.to(device)
 
     summary(model, input_size=(3, 1600, 256))
