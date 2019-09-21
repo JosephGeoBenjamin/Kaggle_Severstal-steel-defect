@@ -1,11 +1,11 @@
-'''ResNet in PyTorch.
+'''ResNet-UNet in PyTorch.
 Reference:
 [1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun
     Deep Residual Learning for Image Recognition. arXiv:1512.03385
 [2] Olaf Ronneberger, Philipp Fischer, Thomas Brox
 	U-Net: Convolutional Networks for Biomedical Image Segmentation. arXiv:1505.04597
 
-Repository:
+Base Code:
 [1] https://github.com/usuyama/pytorch-unet/blob/master/pytorch_resnet18_unet.ipynb
 [2] https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
 
