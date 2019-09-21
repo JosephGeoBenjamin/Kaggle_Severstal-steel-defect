@@ -53,7 +53,6 @@ class DenseBlock(nn.Module):
                 x = torch.cat([x, out], 1) # 1 = channel axis
             return x
 
-Cool OK. So, here's our problem statement now
 class TransitionDown(nn.Sequential):
     def __init__(self, in_channels):
         super().__init__()
@@ -221,7 +220,7 @@ if __name__ =="__main__":
     from torchsummary import summary
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = FCDenseNet103(4)
+    model = FCDenseNet57(4)
     model = model.to(device)
 
     summary(model, input_size=(3, 1600, 256))
