@@ -8,8 +8,9 @@ import torch
 from torch.utils.data import DataLoader
 import os
 from utilities.severstalData_utils import SeverstalSteelData
-from networks.resnet_unet import ResNet18UNet
+# from networks.tiramisu import FCDenseNet57
 import utilities.lossMetrics_utils as LossMet
+import segmentation_models_pytorch as smp
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -24,24 +25,25 @@ def log_to_csv(data, csv_file):
 
 #----------------------------------------------------
 
-TRAIN_NAME = "2fTDB_BalAug"
+TRAIN_NAME = "DBCE-LinkSEResnxt101"
 if not os.path.exists("logs/"+TRAIN_NAME): os.makedirs("logs/"+TRAIN_NAME)
 #----
 
 num_epochs = 10000
-batch_size = 4
-acc_batch = 16 / batch_size
-learning_rate = 1e-4
+batch_size = 8
+acc_batch = 8 / batch_size
+learning_rate = 1e-5
 
-model = ResNet18UNet(4).to(device)
+model = smp.Linknet('se_resnext101_32x4d', classes=4, encoder_weights='imagenet', activation=None).to(device)
 
 ## --- Pretrained Loader
-pretrained_dict = torch.load("weights/fTDB_balanced_model.pth")
+pretrained_dict = torch.load("weights/Resnxt50-Linknet/DBCE-LinkSEResnxt_model.pth")
 model_dict = model.state_dict()
 pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+print("Pretrained layers Loaded:", pretrained_dict.keys())
 model_dict.update(pretrained_dict)
 model.load_state_dict(model_dict)
-# ---
+## ---
 
 
 diceCrit = LossMet.DiceLoss()
@@ -51,12 +53,14 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
 ## --- Loss
 criterionDBCE = LossMet.DiceBCELoss()
 criterionFTversky = LossMet.FocalTverskyLoss()
+criterionFocal = LossMet.FocalLoss()
 def loss_estimator(output, target):
 
     lossDBCE = criterionDBCE(output, target)
-    lossFTversky = criterionFTversky(output, target)
+#     lossFTversky = criterionFTversky(output, target)
+#     lossFocal = criterionFocal(output, target)
 
-    return lossDBCE+lossFTversky
+    return lossDBCE
 #----
 
 
