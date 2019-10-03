@@ -30,14 +30,14 @@ if not os.path.exists("logs/"+TRAIN_NAME): os.makedirs("logs/"+TRAIN_NAME)
 #----
 
 num_epochs = 10000
-batch_size = 8
+batch_size = 4
 acc_batch = 8 / batch_size
 learning_rate = 1e-5
 
-model = smp.Linknet('se_resnext101_32x4d', classes=4, encoder_weights='imagenet', activation=None).to(device)
+model = smp.Linknet('se_resnext101_32x4d', classes=4, activation=None).to(device)
 
 ## --- Pretrained Loader
-pretrained_dict = torch.load("weights/Resnxt50-Linknet/DBCE-LinkSEResnxt_model.pth")
+pretrained_dict = torch.load("weights/DBCE-LinkSEResnxt101_model.pth")
 model_dict = model.state_dict()
 pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
 print("Pretrained layers Loaded:", pretrained_dict.keys())
@@ -104,7 +104,7 @@ if __name__ =="__main__":
                 optimizer.zero_grad()
                 print('epoch[{}/{}], Mini Batch-{} loss:{:.4f}'
                     .format(epoch+1, num_epochs, (ith+1)//acc_batch, acc_loss.data))
-                running_loss.append(acc_loss)
+                running_loss.append(acc_loss.data)
                 acc_loss=0
                 #break
         log_to_csv(running_loss, "logs/"+TRAIN_NAME+"/trainLoss.csv")
