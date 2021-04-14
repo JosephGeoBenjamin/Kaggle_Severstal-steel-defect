@@ -7,6 +7,7 @@ import numpy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 class DiceLoss(nn.Module):
     def __init__(self, weight=None, size_average=True):
@@ -147,3 +148,37 @@ class LovaszHingeLoss(nn.Module):
         inputs = nn.functional.sigmoid(inputs)
         Lovasz = lovasz_hinge(inputs, targets, per_image=False)
         return Lovasz
+
+
+class ClassifierAccuracyComputer():
+    def __init__(self, num_class):
+        self.num_class = num_class
+        self.acc = np.zeros(num_class)
+        self.tp = np.zeros(num_class)
+        self.fp = np.zeros(num_class)
+        self.fn = np.zeros(num_class)
+        self.tn = np.zeros(num_class)
+        self.cnt = np.zeros(num_class)
+
+    def reset(self):
+        self.__init__(self.num_class)
+
+    def update_accuracy(self, out, tgt):
+        tgt = tgt.cpu().numpy().astype(int)
+        out = out.cpu().numpy()
+        out = (out > 0.5).astype(int)
+        self.cnt += np.sum(tgt, 0)
+        self.tp  += np.sum(tgt & out, 0)
+        self.fp  += np.sum((1-tgt) & out, 0)
+        self.fn  += np.sum(tgt & (1-out), 0)
+        self.tn  += np.sum((1-tgt) & (1-out), 0)
+        self.acc += np.sum(tgt != out, 0)
+
+    def get_acc(self):
+
+        return (sum(self.tp) / sum(self.cnt),
+                    [np.divide(self.tp, self.cnt),
+                    np.divide(self.fp, self.cnt),
+                    np.divide(self.fn, self.cnt),
+                    np.divide(self.acc, self.cnt)]
+                )

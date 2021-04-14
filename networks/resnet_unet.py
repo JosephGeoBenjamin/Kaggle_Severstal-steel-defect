@@ -93,16 +93,12 @@ class ResNet18UNet(nn.Module):
 
         return out
 
-
-
-
-
 if __name__ =="__main__":
 
     from torchsummary import summary
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    print("ResNet18UNet Summary")
     model = ResNet18UNet(4)
     model = model.to(device)
-
     summary(model, input_size=(3, 1600, 256))
