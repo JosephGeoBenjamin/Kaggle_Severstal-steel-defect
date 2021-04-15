@@ -18,7 +18,7 @@ torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
 
 ##===== Init Setup =============================================================
-INST_NAME = "test1"
+INST_NAME = "test_class"
 
 num_epochs = 10000
 batch_size = 3
@@ -129,6 +129,6 @@ if __name__ =="__main__":
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
             best_acc = val_acc
-            torch.save(model.state_dict(), WGT_PREFIX+"model_weight.pth")
+            torch.save(model, WGT_PREFIX+"model.pth")
             LOG2CSV([epoch+1,val_loss.item(), val_acc] + val_acc_list,
                     LOG_PATH+"/bestCheckpoint.csv")

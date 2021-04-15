@@ -4,11 +4,14 @@ Output: 4 binary mask layers each corresponding to a class
 
 '''
 import os
+from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
+
 from utils.severstalData_utils import SeverstalSteelData
 import utils.metrics_utils as metrics
-from utils.running_utils import LOG2CSV
+from utils.running_utils import LOG2CSV, TEST_MODEL
+
 import segmentation_models_pytorch as smp
 # from networks.tiramisu import FCDenseNet57
 
@@ -16,7 +19,7 @@ torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
 
 ##===== Init Setup =============================================================
-INST_NAME = "Test_segm"
+INST_NAME = "test_segm"
 
 num_epochs = 10000
 batch_size = 1
@@ -56,7 +59,7 @@ model = smp.Linknet('se_resnext101_32x4d', classes=4,
                     activation=None, encoder_weights=None)
 model = model.to(device)
 
-
+TEST_MODEL(model, (3, 1600, 256))
 ##====== Optimizer Zone ========================================================
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
@@ -130,6 +133,6 @@ if __name__ =="__main__":
         if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
-            torch.save(model.state_dict(), WGT_PREFIX+"model_weight.pth")
+            torch.save(model, WGT_PREFIX+"model.pth")
             LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
                     LOG_PATH+"/bestCheckpoint.csv")
