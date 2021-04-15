@@ -1,6 +1,6 @@
 ''' Binary Classifier
 
-Output: 0 if no defect | else 1
+Output: Binary Classifier for 4+1 classes seperately
 
 '''
 import os
@@ -57,7 +57,7 @@ valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size,
 
 model = tvmodels.resnet.ResNet(block= tvmodels.resnet.Bottleneck,
                         layers=[3, 4, 6, 3], # renet50
-                        num_classes=5   )
+                        num_classes=5 )
 
 TEST_MODEL(model, (3, 1600, 256))
 

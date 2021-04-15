@@ -2,9 +2,7 @@
 Utilities for working with Severstal Steel defect dataset
 Dataset: https://www.kaggle.com/c/severstal-steel-defect-detection/
 '''
-import glob
-import sys
-import os
+from os.path import join as OSPJ
 import torch
 from torch.utils.data import Dataset
 from torch.autograd import Variable
@@ -38,14 +36,14 @@ class SeverstalClassifierData(Dataset):
         return len(self.df)
 
     def _load_image(self, idx):
-        img_path = os.path.join( self.root_dir , self.df.iloc[idx]['image'])
+        img_path = OSPJ( self.root_dir , self.df.iloc[idx]['ImageId'])
         img = imio.imread(img_path)
         img = img.transpose(2,0,1)
         img = self.manual_transforms(img)
         return img
 
     def _load_class(self, idx):
-        categ = self.df.iloc[idx]['class']
+        categ = self.df.iloc[idx]['Class']
         arr = np.zeros(self.num_dfct)
         r = [int(x) for x in str(categ)]
         arr[r] = 1
@@ -63,49 +61,40 @@ class SeverstalClassifierData(Dataset):
         return img
 
 
-
-
 class SeverstalSteelData(Dataset):
     ''' Used to load images and numpy GroundTruth
     '''
-    def __init__(self, csv_file, root_dir, device='cpu'):
+    def __init__(self, img_dir, split_csv, rle_csv,
+                        mode = 'defect_alone', #all
+                        device='cpu'):
         self.device = device
-        join = os.path.join
-        self.imgList = self.data_path_fromCSV(join(root_dir,csv_file),
-                                        join(root_dir,"images") ,
-                                        dataExt = ".jpg")
-        self.gtList = self.data_path_fromCSV(join(root_dir,csv_file),
-                                        join(root_dir,"groundtruths") ,
-                                        dataExt = ".npy")
-        if (not self.imgList) or (not self.gtList):
-            print("Empty data. Corruption on CSV read", file=sys.stderr)
+        self.img_dir = img_dir
+        df = pd.read_csv(split_csv)
+        self.rle_df = pd.read_csv(rle_csv)
 
-
-        if (len(self.imgList) == len(self.gtList)):
-            for i in range(len(self.imgList)):
-                imgBase = os.path.basename(self.imgList[i]).replace('.jpg', "")
-                gtBase = os.path.basename(self.gtList[i]).replace('.npy', "")
-                if ( imgBase != gtBase):
-                    print("Corrupted: MisMatch in file names",imgList[i], gtList[i] ,file=sys.stderr)
+        if mode == 'defect_alone':
+            self.img_list = list( pd.merge(df['ImageId'],
+                                    self.rle_df['ImageId'],
+                                    how='inner')['ImageId'] )
         else:
-            print("Corrupted: MisMatch in Image and GroundTruth count", file=sys.stderr)
-
-
+            self.img_list = df['ImageId']
 
     def __getitem__(self, idx):
         """ Returns torch format CHW
         """
-        img = imio.imread(self.imgList[idx])
-        img = img.transpose(2,0,1)
-        gt = np.load(self.gtList[idx])
+        img_id = self.img_list[idx]
+        img = imio.imread(OSPJ(self.img_dir,img_id))
+        img = img.transpose(2,0,1) # 3,256,1600
+
+        gt = self.compose_gt_mask(img_id)
         img, gt = self.manual_transforms(img, gt)
 
         img = torch.from_numpy(img).type(torch.FloatTensor)
         gt = torch.from_numpy(gt).type(torch.FloatTensor)
-        return  Variable(img), Variable(gt)
+        return img, gt
 
     def __len__(self):
-        return len(self.imgList)
+        return len(self.img_list)
 
 
     def manual_transforms(self, img, target):
@@ -119,20 +108,19 @@ class SeverstalSteelData(Dataset):
 
         return img, target
 
+    def rle_to_matrix(self, arr, cid, rle):
+        rle = [ int(r) for r in rle.split() ]
+        for i in range(0, len(rle), 2):
+            lc = rle[i]; ln = rle[i+1]
+            arr[cid-1, lc:lc+ln] = 1
+        return arr
 
-    def data_path_fromCSV(self, csvFilePath, rootPath, dataExt = ".jpg"):
-        imgNames = []
-        with open(csvFilePath, "r") as csvFile:
-            csv_reader = csv.DictReader(csvFile, delimiter=',')
-            for lines in csv_reader:
-                imgNames.append(lines['Image_Name'])
-
-        dataPaths = []
-        for name in imgNames:
-            path = os.path.join(rootPath, name.replace(".jpg",dataExt))
-            if os.path.isfile(path):
-                dataPaths.append(path)
-            else:
-                print ("File Doesn't exist:", path)
-
-        return dataPaths
+    def compose_gt_mask(self, img_id):
+        rs = self.rle_df[self.rle_df['ImageId'] == img_id]
+        new = np.zeros((4,1600*256))
+        for j, r in rs.iterrows():
+            new = self.rle_to_matrix(new, r['ClassId'], r['EncodedPixels'])
+        ## change RLE to image structure
+        new = new.reshape(4, 1600, 256)
+        new = new.transpose(0,2,1)
+        return new

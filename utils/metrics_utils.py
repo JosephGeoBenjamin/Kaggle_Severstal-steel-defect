@@ -166,7 +166,7 @@ class ClassifierAccuracyComputer():
     def update_accuracy(self, out, tgt):
         tgt = tgt.cpu().numpy().astype(int)
         out = out.cpu().numpy()
-        out = (out > 0.5).astype(int)
+        out = (out > 0.65).astype(int)
         self.cnt += np.sum(tgt, 0)
         self.tp  += np.sum(tgt & out, 0)
         self.fp  += np.sum((1-tgt) & out, 0)
@@ -176,9 +176,9 @@ class ClassifierAccuracyComputer():
 
     def get_acc(self):
 
-        return (sum(self.tp) / sum(self.cnt),
-                    [np.divide(self.tp, self.cnt),
-                    np.divide(self.fp, self.cnt),
-                    np.divide(self.fn, self.cnt),
-                    np.divide(self.acc, self.cnt)]
-                )
+        acc_val = sum(self.tp) / sum(self.cnt)
+        lst = [np.divide(self.tp, self.cnt),
+                np.divide(self.fp, self.cnt),
+                np.divide(self.fn, self.cnt),
+                np.divide(self.acc, self.cnt)]
+        return (acc_val, lst)

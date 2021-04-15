@@ -3,57 +3,69 @@
 Output: 4 binary mask layers each corresponding to a class
 
 '''
-
+import os
 import torch
 from torch.utils.data import DataLoader
-import os
-from utilities.severstalData_utils import SeverstalSteelData
-# from networks.tiramisu import FCDenseNet57
-import utilities.lossMetrics_utils as LossMet
+from utils.severstalData_utils import SeverstalSteelData
+import utils.metrics_utils as metrics
+from utils.running_utils import LOG2CSV
 import segmentation_models_pytorch as smp
+# from networks.tiramisu import FCDenseNet57
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+torch.manual_seed(0)
+torch.backends.cudnn.deterministic = True
 
-#----
-
-import csv
-def log_to_csv(data, csv_file):
-    with open(csv_file, "a") as csvFile:
-        writer = csv.writer(csvFile)
-        writer.writerow(data)
-    csvFile.close()
-
-#----------------------------------------------------
-
-TRAIN_NAME = "DBCE-LinkSEResnxt101"
-if not os.path.exists("logs/"+TRAIN_NAME): os.makedirs("logs/"+TRAIN_NAME)
-#----
+##===== Init Setup =============================================================
+INST_NAME = "Test_segm"
 
 num_epochs = 10000
-batch_size = 4
-acc_batch = 8 / batch_size
+batch_size = 1
+acc_batch = 1
 learning_rate = 1e-5
 
-model = smp.Linknet('se_resnext101_32x4d', classes=4, activation=None).to(device)
+##------------------------------------------------------------------------------
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-## --- Pretrained Loader
-pretrained_dict = torch.load("weights/DBCE-LinkSEResnxt101_model.pth")
-model_dict = model.state_dict()
-pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-print("Pretrained layers Loaded:", pretrained_dict.keys())
-model_dict.update(pretrained_dict)
-model.load_state_dict(model_dict)
-## ---
+LOG_PATH = "hypotheses/"+INST_NAME+"/"
+WGT_PREFIX = LOG_PATH+"/weights/"
+if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
+
+##===== Datasets ===============================================================
+
+DATASET_PATH='datasets/severstal-steel-defect-detection/'
+
+train_dataset = SeverstalSteelData( img_dir= DATASET_PATH+'/train_images',
+                                    split_csv=DATASET_PATH+'/steel_train.csv',
+                                    rle_csv=DATASET_PATH+'/train.csv',
+                                    device = device)
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
+                        shuffle=True, num_workers=0)
+
+test_dataset = SeverstalSteelData(img_dir= DATASET_PATH+'/train_images',
+                                    split_csv=DATASET_PATH+'/steel_valid.csv',
+                                    rle_csv=DATASET_PATH+'/train.csv',
+                                    device = device)
+test_dataloader = DataLoader(test_dataset, batch_size=batch_size,
+                        shuffle=False, num_workers=0)
+
+# print(train_dataset.__getitem__(2))
+
+##===== Model Configuration ====================================================
+
+model = smp.Linknet('se_resnext101_32x4d', classes=4,
+                    activation=None, encoder_weights=None)
+model = model.to(device)
 
 
-diceCrit = LossMet.DiceLoss()
+##====== Optimizer Zone ========================================================
+
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                              weight_decay=1e-5)
 
-## --- Loss
-criterionDBCE = LossMet.DiceBCELoss()
-criterionFTversky = LossMet.FocalTverskyLoss()
-criterionFocal = LossMet.FocalLoss()
+criterionDBCE = metrics.DiceBCELoss()
+criterionFTversky = metrics.FocalTverskyLoss()
+criterionFocal = metrics.FocalLoss()
+
 def loss_estimator(output, target):
 
     lossDBCE = criterionDBCE(output, target)
@@ -61,24 +73,9 @@ def loss_estimator(output, target):
 #     lossFocal = criterionFocal(output, target)
 
     return lossDBCE
-#----
 
 
-DATASET_PATH='datasets/severstal/'
-
-train_dataset = SeverstalSteelData(csv_file='train.csv',
-                                    root_dir= DATASET_PATH,
-                                    device = device)
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
-                        shuffle=True, num_workers=8)
-
-test_dataset = SeverstalSteelData(csv_file='validate.csv',
-                                   root_dir=DATASET_PATH,
-                                   device = device)
-test_dataloader = DataLoader(test_dataset, batch_size=batch_size,
-                        shuffle=False, num_workers=8)
-
-#-----
+##=========  MAIN  ===========================================================
 
 if __name__ =="__main__":
 
@@ -106,8 +103,8 @@ if __name__ =="__main__":
                     .format(epoch+1, num_epochs, (ith+1)//acc_batch, acc_loss.data))
                 running_loss.append(acc_loss.data)
                 acc_loss=0
-                #break
-        log_to_csv(running_loss, "logs/"+TRAIN_NAME+"/trainLoss.csv")
+                # break
+        LOG2CSV(running_loss, LOG_PATH+"/trainLoss.csv")
 
         #--- Validate
         val_loss = 0
@@ -119,20 +116,20 @@ if __name__ =="__main__":
                 val_output = model(val_img)
                 val_loss += loss_estimator(val_output, val_gt)
 
-                val_accuracy += (1 - diceCrit(val_output, val_gt))
-            #break
+                val_accuracy += (1 - criterionDBCE(val_output, val_gt))
+            # break
         val_loss = val_loss / len(test_dataloader)
         val_accuracy = val_accuracy / len(test_dataloader)
 
         print('epoch[{}/{}], [-----TEST------] loss:{:.4f}  Accur:{:.4f}'
               .format(epoch+1, num_epochs, val_loss.data, val_accuracy.data))
-        log_to_csv([val_loss.item(), val_accuracy.item()],
-                    "logs/"+TRAIN_NAME+"/testLoss.csv")
+        LOG2CSV([val_loss.item(), val_accuracy.item()],
+                    LOG_PATH+"/testLoss.csv")
 
         #--- save Checkpoint
         if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
-            torch.save(model.state_dict(), "weights/"+TRAIN_NAME+"_model.pth")
-            log_to_csv([epoch+1, val_loss.item(), val_accuracy.item()],
-                    "logs/"+TRAIN_NAME+"/bestCheckpoint.csv")
+            torch.save(model.state_dict(), WGT_PREFIX+"model_weight.pth")
+            LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
+                    LOG_PATH+"/bestCheckpoint.csv")
