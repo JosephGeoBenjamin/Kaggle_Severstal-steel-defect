@@ -84,7 +84,8 @@ if __name__ =="__main__":
 
     best_loss = float("inf")
     for epoch in range(num_epochs):
-        #--- Train
+        #------ Train -----------------------
+        model.train()
         acc_loss = 0
         running_loss = []
         for ith, (img, gt) in enumerate(train_dataloader):
@@ -109,7 +110,8 @@ if __name__ =="__main__":
                 # break
         LOG2CSV(running_loss, LOG_PATH+"/trainLoss.csv")
 
-        #--- Validate
+        #------ Validate ---------------------
+        model.eval()
         val_loss = 0
         val_accuracy = 0
         for jth, (val_img, val_gt) in enumerate(test_dataloader):

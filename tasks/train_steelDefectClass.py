@@ -81,6 +81,7 @@ if __name__ =="__main__":
     best_acc = 0
     for epoch in range(num_epochs):
         #--- Train
+        model.train()
         acc_loss = 0
         running_loss = []
         for ith, (img, gt) in enumerate(train_dataloader):
@@ -106,6 +107,7 @@ if __name__ =="__main__":
         LOG2CSV(running_loss, LOG_PATH+"/trainLoss.csv")
 
         #--- Validate
+        model.eval()
         val_loss = 0
         acc_est.reset()
         for jth, (val_img, val_gt) in enumerate(tqdm(valid_dataloader)):

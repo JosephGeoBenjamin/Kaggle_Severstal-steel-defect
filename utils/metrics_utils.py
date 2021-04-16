@@ -165,6 +165,7 @@ class ClassifierAccuracyComputer():
 
     def update_accuracy(self, out, tgt):
         tgt = tgt.cpu().numpy().astype(int)
+        out = F.sigmoid(out) # final activation
         out = out.cpu().numpy()
         out = (out > 0.65).astype(int)
         self.cnt += np.sum(tgt, 0)
